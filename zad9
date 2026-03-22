@@ -1,0 +1,138 @@
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Scanner;
+import java.time.LocalDate;
+
+@SuppressWarnings("deprecation")
+public class ArchiveStoreTest {
+    public static void main(String[] args) {
+        ArchiveStore store = new ArchiveStore();
+        LocalDate date = LocalDate.of(2013, 10, 7);
+        Scanner scanner = new Scanner(System.in);
+        scanner.nextLine();
+        int n = scanner.nextInt();
+        scanner.nextLine();
+        scanner.nextLine();
+        int i;
+        for (i = 0; i < n; ++i) {
+            int id = scanner.nextInt();
+            long days = scanner.nextLong();
+
+            LocalDate dateToOpen = date.atStartOfDay().plusSeconds(days * 24 * 60 * 60).toLocalDate();
+            LockedArchive lockedArchive = new LockedArchive(id, dateToOpen);
+            store.archiveItem(lockedArchive, date);
+        }
+        scanner.nextLine();
+        scanner.nextLine();
+        n = scanner.nextInt();
+        scanner.nextLine();
+        scanner.nextLine();
+        for (i = 0; i < n; ++i) {
+            int id = scanner.nextInt();
+            int maxOpen = scanner.nextInt();
+            SpecialArchive specialArchive = new SpecialArchive(id, maxOpen);
+            store.archiveItem(specialArchive, date);
+        }
+        scanner.nextLine();
+        scanner.nextLine();
+        while(scanner.hasNext()) {
+            int open = scanner.nextInt();
+            try {
+                store.openItem(open, date);
+            } catch(NonExistingItemException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+        System.out.println(store.getLog());
+    }
+}
+
+// вашиот код овде
+class NonExistingItemException extends Exception {
+    public NonExistingItemException(String message){ super(message);}
+}
+
+class Archive {
+    private int id;
+    private LocalDate dateArchived;
+
+
+
+    public Archive(int id) {
+        this.id = id;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public LocalDate getDateArchived() {
+        return dateArchived;
+    }
+    public String open(LocalDate dateArchived) {
+        return String.format("Item %d opened at %s\n", id, dateArchived);
+    }
+
+    public void setDateArchived(LocalDate dateArchived) {
+        this.dateArchived = dateArchived;
+    }
+}
+class ArchiveStore{
+    private ArrayList<Archive> archives;
+    private ArrayList<String> log;
+    public ArchiveStore() {
+        this.archives = new ArrayList<>();
+        this.log = new ArrayList<>();
+    }
+    public void archiveItem(Archive item, LocalDate date) {
+        item.setDateArchived(date);
+        archives.add(item);
+        log.add(String.format("Item %d archived at %s\n", item.getId(), date));
+    }
+    public void openItem(int id, LocalDate date) throws NonExistingItemException {
+        Archive arch = archives.stream().filter(archive -> archive.getId() == id).findFirst().orElseThrow(()-> new NonExistingItemException("Item with id "+ id +" doesn't exist"));
+        log.add(arch.open(date));
+        }
+        public String getLog() {
+        StringBuilder logs = new StringBuilder();
+        for (int i = 0; i < log.size(); ++i) {
+            logs.append(log.get(i));
+        }
+        return logs.toString();
+        }
+
+    }
+    class SpecialArchive extends Archive {
+    private int maxOpen;
+    private int currentOpen;
+
+        public SpecialArchive(int id, int maxOpen) {
+            super(id);
+            this.maxOpen = maxOpen;
+            currentOpen = 0;
+        }
+        @Override
+        public String open(LocalDate date){
+            if(currentOpen >= maxOpen){
+                return String.format("Item %s cannot be opened more than %s times \n", getId(), maxOpen);
+            }
+            currentOpen++;
+            return String.format("Item %s opened at %s \n", getId(), date);
+        }
+
+    }
+    class LockedArchive extends Archive {
+    private LocalDate dateLocked;
+    public LockedArchive(int id, LocalDate dateLocked) {
+    super(id);
+    this.dateLocked = dateLocked;
+
+    }
+    @Override
+        public String open(LocalDate date){
+        if(date.isBefore(dateLocked)){
+            return String.format("Item %s cannot be opened before %s \n", getId(), dateLocked);
+        }
+        return String.format("Item %s opened at %s \n", getId(), date);
+    }
+    }
