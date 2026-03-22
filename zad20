@@ -1,0 +1,122 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+public class SubtitlesTest {
+    public static void main(String[] args) throws IOException {
+        Subtitles subtitles = new Subtitles();
+        int n = subtitles.loadSubtitles(System.in);
+        System.out.println("+++++ ORIGINIAL SUBTITLES +++++");
+        subtitles.print();
+        int shift = n * 37;
+        shift = (shift % 2 == 1) ? -shift : shift;
+        System.out.println(String.format("SHIFT FOR %d ms", shift));
+        subtitles.shift(shift);
+        System.out.println("+++++ SHIFTED SUBTITLES +++++");
+        subtitles.print();
+    }
+}
+
+// Вашиот код овде
+class subs{
+    private int Id;
+    private String start;
+    private String end;
+    private List<String> text;
+
+    public subs(int id, String start, String end, List<String> text) {
+        Id = id;
+        this.start = start;
+        this.end = end;
+        this.text = text;
+    }
+    private static int toMilis(String s) {
+        String []parts=s.split("[:,]");
+        int h=Integer.parseInt(parts[0]);
+        int m=Integer.parseInt(parts[1]);
+        int sec=Integer.parseInt(parts[2]);
+        int milis=Integer.parseInt(parts[3]);
+        return h*3600000+m*60000+sec*1000+milis;
+    }
+    private static String formMilis(int totalMs){
+        if (totalMs < 0) totalMs = 0;
+        int h = totalMs / 3600000; totalMs %= 3600000;
+        int m = totalMs / 60000; totalMs %= 60000;
+        int s = totalMs / 1000;
+        int ms = totalMs % 1000;
+        return String.format("%02d:%02d:%02d,%03d", h, m, s, ms);
+    }
+    public void shift(int deltaMs){
+        int startMS = toMilis(start) + deltaMs;
+        int endMS = toMilis(end) + deltaMs;
+
+        if (startMS < 0) startMS = 0;   // optional clamp
+        if (endMS < 0) endMS = 0;       // optional clamp
+
+        start = formMilis(startMS);
+        end = formMilis(endMS);
+    }
+
+
+    @Override
+    public String toString() {
+         StringBuilder sb = new StringBuilder();
+        sb.append(Id).append("\n");
+        sb.append(start).append(" --> ").append(end).append("\n");
+        for (String line : text) {
+            sb.append(line).append("\n");
+        }
+        return sb.toString();
+    }
+
+}
+class Subtitles{
+    List<subs> subs;
+
+    public Subtitles() {
+        this.subs=new ArrayList<>();
+    }
+
+    public int loadSubtitles(InputStream in) throws IOException {
+        Scanner sc = new Scanner(in);
+        while (sc.hasNextLine()){
+            String idLine = sc.nextLine().trim();
+            if (idLine.isEmpty()) continue; // skip blanks
+
+            int id = Integer.parseInt(idLine);
+
+            // read time line
+            String timeLine = sc.nextLine().trim();
+            String[] times = timeLine.split(" --> ");
+            String start = times[0];
+            String end = times[1];
+
+            // read text lines until blank
+            List<String> textLines = new ArrayList<>();
+            while (sc.hasNextLine()) {
+                String line = sc.nextLine();
+                if (line.isEmpty()) break;
+                textLines.add(line);
+            }
+
+            subs.add(new subs(id, start, end, textLines));
+        }
+        return subs.size();
+    }
+    public void print() {
+        for (subs s : subs) {
+            System.out.println(s);
+        }
+    }
+
+    public void shift(int ms) {
+        for (subs s : subs) {
+            s.shift(ms);
+        }
+    }
+        }
+
