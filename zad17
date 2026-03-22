@@ -1,0 +1,172 @@
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+public class MojDDVTest {
+
+    public static void main(String[] args) {
+
+        MojDDV mojDDV = new MojDDV();
+
+        System.out.println("===READING RECORDS FROM INPUT STREAM===");
+        mojDDV.readRecords(System.in);
+
+        System.out.println("===PRINTING TAX RETURNS RECORDS TO OUTPUT STREAM ===");
+        mojDDV.printTaxReturns(System.out);
+
+        System.out.println("===PRINTING SUMMARY STATISTICS FOR TAX RETURNS TO OUTPUT STREAM===");
+        mojDDV.printStatistics(System.out);
+
+    }
+}
+class Tax{
+    int ID;
+    List<Double> price;
+    List<Character> TaxType;
+
+
+    public Tax(int ID, List<Double>  price, List<Character> taxType) {
+        this.ID = ID;
+        this.price = price;
+        TaxType = taxType;
+
+    }
+
+    public static Tax createTax(String line) throws AmountNotAllowedException {
+
+                String[] parts = line.split("\\s+");  // split by whitespace
+                int id = Integer.parseInt(parts[0]);
+                List<Double> price = new ArrayList<>();
+                List<Character> taxType = new ArrayList<>();
+
+                for (int i = 1; i < parts.length; i+=2) {
+                    char type = parts[i+1].charAt(0);
+                    double priceValue = Double.parseDouble(parts[i]);
+                    price.add(priceValue);
+                    taxType.add(type);
+                }
+                double sum=price.stream().mapToDouble(Double::doubleValue).sum();
+                if(sum>30000){
+                    throw new AmountNotAllowedException(
+                            String.format("Receipt with amount %.0f is not allowed to be scanned", sum)
+                    );
+                }
+
+                return new Tax(id, price, taxType);
+    }
+    public static List<Double> getTaxReturn(Tax tax) {
+        double taxReturn=0;
+        List<Double> taxReturnList = new ArrayList<>();
+        for (int i = 0; i < tax.TaxType.size(); i++) {
+            if (tax.TaxType.get(i).equals('A')) {
+                taxReturn += tax.price.get(i) * 0.18 * 0.15;
+
+            } else if (tax.TaxType.get(i).equals('B')) {
+                taxReturn += tax.price.get(i) * 0.05 * 0.15;
+
+            } else {
+                taxReturn += tax.price.get(i) * 0.00 * 0.15;
+
+            }
+        }
+        taxReturnList.add(taxReturn);
+        return taxReturnList;
+    }
+    public static String getStats(Tax tax) {
+        double sum=tax.price.stream().mapToDouble(Double::doubleValue).sum();
+        double taxReturn=0;
+        for(int i=0;i<tax.TaxType.size();i++) {
+            if(tax.TaxType.get(i).equals('A')) {
+             taxReturn+=tax.price.get(i)*0.18 * 0.15;
+            }else if(tax.TaxType.get(i).equals('B')) {
+                taxReturn+=tax.price.get(i)*0.05 * 0.15;
+            }else {
+                taxReturn+=tax.price.get(i)*0.00 * 0.15;
+            }
+
+
+
+        }
+        return String.format("%s %.0f %.2f",tax.ID, sum, taxReturn);
+    }
+
+    public static String getStats2(Tax tax) {
+        List<Double> taxReturnList = getTaxReturn(tax);
+        double min = taxReturnList.stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
+        double max = taxReturnList.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+        double sum = taxReturnList.stream().mapToDouble(Double::doubleValue).sum();
+        long count = taxReturnList.size();
+        double avg = taxReturnList.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+
+        // Print with tab alignment and 5 decimal places for decimals
+        return String.format("min:\t%10.5f\nmax:\t%10.5f\nsum:\t%10.5f\ncount:\t%5d\navg:\t%10.5f",
+                min, max, sum, count, avg);
+    }
+
+}
+class MojDDV{
+    List<Tax> taxes;
+
+    public MojDDV() {
+        this.taxes=new ArrayList<>();
+    }
+
+
+    public void readRecords(InputStream in) {
+        BufferedReader reader=new BufferedReader(new InputStreamReader(in));
+        taxes = reader.lines()
+                .filter(Objects::nonNull)
+                .map(line -> {
+                    try {
+                        return Tax.createTax(line);
+                    } catch (AmountNotAllowedException e) {
+                        System.out.println(e.getMessage());
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    public void printTaxReturns(PrintStream out) {
+        PrintWriter writer = new PrintWriter(out);
+        taxes.stream().forEach(t->writer.println(Tax.getStats(t)));
+        writer.flush();
+
+       }
+
+    public void printStatistics(PrintStream out) {
+        PrintWriter writer = new PrintWriter(out);
+
+        // Flatten all tax returns from all receipts
+        List<Double> allTaxReturns = new ArrayList<>();
+        for (Tax t : taxes) {
+            allTaxReturns.addAll(Tax.getTaxReturn(t));  // originally per item
+        }
+
+        // Compute statistics on these values
+        double min = allTaxReturns.stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
+        double max = allTaxReturns.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+        double sum = allTaxReturns.stream().mapToDouble(Double::doubleValue).sum();
+        long count = allTaxReturns.size();
+        double avg = allTaxReturns.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+
+        writer.printf("min:\t%10.5f\n", min);
+        writer.printf("max:\t%10.5f\n", max);
+        writer.printf("sum:\t%10.5f\n", sum);
+        writer.printf("count:\t%5d\n", count);
+        writer.printf("avg:\t%10.5f\n", avg);
+
+        writer.flush();
+    }
+
+}
+
+
+class AmountNotAllowedException extends Exception{
+    public AmountNotAllowedException(String message){
+        super(message);
+    }
+}
