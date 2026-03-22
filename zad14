@@ -1,0 +1,167 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+import java.util.stream.Collectors;
+
+public class ComponentTest {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        String name = scanner.nextLine();
+        Window window = new Window(name);
+        Component prev = null;
+        while (true) {
+            try {
+                int what = scanner.nextInt();
+                scanner.nextLine();
+                if (what == 0) {
+                    int position = scanner.nextInt();
+                    window.addComponent(position, prev);
+                } else if (what == 1) {
+                    String color = scanner.nextLine();
+                    int weight = scanner.nextInt();
+                    Component component = new Component(color, weight);
+                    prev = component;
+                } else if (what == 2) {
+                    String color = scanner.nextLine();
+                    int weight = scanner.nextInt();
+                    Component component = new Component(color, weight);
+                    prev.addComponent(component);
+                    prev = component;
+                } else if (what == 3) {
+                    String color = scanner.nextLine();
+                    int weight = scanner.nextInt();
+                    Component component = new Component(color, weight);
+                    prev.addComponent(component);
+                } else if(what == 4) {
+                    break;
+                }
+
+            } catch (InvalidPositionException e) {
+                System.out.println(e.getMessage());
+            }
+            scanner.nextLine();
+        }
+
+        System.out.println("=== ORIGINAL WINDOW ===");
+        System.out.println(window);
+        int weight = scanner.nextInt();
+        scanner.nextLine();
+        String color = scanner.nextLine();
+        window.changeColor(weight, color);
+        System.out.println(String.format("=== CHANGED COLOR (%d, %s) ===", weight, color));
+        System.out.println(window);
+        int pos1 = scanner.nextInt();
+        int pos2 = scanner.nextInt();
+        System.out.println(String.format("=== SWITCHED COMPONENTS %d <-> %d ===", pos1, pos2));
+        window.swichComponents(pos1, pos2);
+        System.out.println(window);
+    }
+}
+class InvalidPositionException extends Exception{
+    public InvalidPositionException(String message){
+        super(message);
+    }
+}
+
+class Component implements Comparable<Component> {
+    String color;
+    int weight;
+    List<Component> components;
+    public Component(String color, int weight) {
+        this.color = color;
+        this.weight = weight;
+        this.components = new ArrayList<>();
+    }
+    public void addComponent(Component component) {
+        components.add(component);
+        components=components.stream().sorted().collect(Collectors.toList());
+    }
+
+    @Override
+    public int compareTo(Component o) {
+        if(this.weight == o.weight) {
+            return this.color.compareTo(o.color);
+        }
+        return this.weight - o.weight;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public int getWeight() {
+        return weight;
+    }
+
+    public List<Component> getComponents() {
+        return components;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+}
+class Window {
+    String name;
+    List<Component> components;
+    public Window(String name) {
+        this.name = name;
+        this.components = new ArrayList<>();
+    }
+    public void addComponent(int position, Component component) throws InvalidPositionException {
+        while (components.size() <= position) {
+            components.add(null);
+        }
+        if (components.get(position) != null) {
+            throw new InvalidPositionException("Invalid position " + position + ", alredy taken!");
+        }
+        components.set(position, component);
+
+    }
+    public void changeColor(int weight, String color) {
+        getAllComponents(components).stream() // flatten all components
+                .filter(c -> c.getWeight() < weight)
+                .forEach(c -> c.setColor(color));
+    }
+
+    private List<Component> getAllComponents(List<Component> list) {
+        List<Component> all = new ArrayList<>();
+        List<Component> current = new ArrayList<>(list);
+
+        while (!current.isEmpty()) {
+            Component c = current.remove(0);
+            if (c != null) {
+                all.add(c);
+                current.addAll(c.getComponents());
+            }
+        }
+
+        return all;
+    }
+    public void swichComponents(int pos1, int pos2){
+        Component c1=components.get(pos1);
+        Component c2=components.get(pos2);
+        components.set(pos2,c1);
+        components.set(pos1,c2);
+    }
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("WINDOW ").append(name).append("\n");
+        for (int i = 0; i < components.size(); i++) {
+            printComponent(sb, components.get(i), i, "");
+        }
+        return sb.toString();
+    }
+    private void printComponent(StringBuilder sb, Component c, int pos, String indent) {
+        if (c == null) return;
+        sb.append(indent);
+        if (pos >= 0) sb.append(pos).append(":");
+        sb.append(c.getWeight()).append(":").append(c.getColor()).append("\n");
+        for (Component sub : c.getComponents()) {
+            printComponent(sb, sub, -1, indent + "---");
+        }
+    }
+}
+
+
