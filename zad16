@@ -1,0 +1,109 @@
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+public class MojDDVTest {
+
+    public static void main(String[] args) {
+
+        MojDDV mojDDV = new MojDDV();
+
+        System.out.println("===READING RECORDS FROM INPUT STREAM===");
+        mojDDV.readRecords(System.in);
+
+        System.out.println("===PRINTING TAX RETURNS RECORDS TO OUTPUT STREAM ===");
+        mojDDV.printTaxReturns(System.out);
+
+    }
+}
+class Tax{
+    int ID;
+    List<Double> price;
+    List<Character> TaxType;
+
+    public Tax(int ID, List<Double>  price, List<Character> taxType) {
+        this.ID = ID;
+        this.price = price;
+        TaxType = taxType;
+    }
+
+    public static Tax createTax(String line) throws AmountNotAllowedException {
+
+                String[] parts = line.split("\\s+");  // split by whitespace
+                int id = Integer.parseInt(parts[0]);
+                List<Double> price = new ArrayList<>();
+                List<Character> taxType = new ArrayList<>();
+
+                for (int i = 1; i < parts.length; i+=2) {
+                    char type = parts[i+1].charAt(0);
+                    double priceValue = Double.parseDouble(parts[i]);
+                    price.add(priceValue);
+                    taxType.add(type);
+                }
+                double sum=price.stream().mapToDouble(Double::doubleValue).sum();
+                if(sum>30000){
+                    throw new AmountNotAllowedException(
+                            String.format("Receipt with amount %.0f is not allowed to be scanned", sum)
+                    );
+                }
+
+                return new Tax(id, price, taxType);
+    }
+    public static String getStats(Tax tax) {
+        double sum=tax.price.stream().mapToDouble(Double::doubleValue).sum();
+        double taxReturn=0;
+        for(int i=0;i<tax.TaxType.size();i++) {
+            if(tax.TaxType.get(i).equals('A')) {
+             taxReturn+=tax.price.get(i)*0.18 * 0.15;
+            }else if(tax.TaxType.get(i).equals('B')) {
+                taxReturn+=tax.price.get(i)*0.05 * 0.15;
+            }else {
+                taxReturn+=tax.price.get(i)*0.00 * 0.15;
+            }
+
+
+        }
+        return String.format("%s %.0f %.2f",tax.ID, sum, taxReturn);
+    }
+
+}
+class MojDDV{
+    List<Tax> taxes;
+
+    public MojDDV() {
+        this.taxes=new ArrayList<>();
+    }
+
+
+    public void readRecords(InputStream in) {
+        BufferedReader reader=new BufferedReader(new InputStreamReader(in));
+        taxes = reader.lines()
+                .filter(Objects::nonNull)
+                .map(line -> {
+                    try {
+                        return Tax.createTax(line);
+                    } catch (AmountNotAllowedException e) {
+                        System.out.println(e.getMessage());
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    public void printTaxReturns(PrintStream out) {
+        PrintWriter writer = new PrintWriter(out);
+        taxes.stream().forEach(t->writer.println(Tax.getStats(t)));
+        writer.flush();
+
+       }
+
+    }
+
+class AmountNotAllowedException extends Exception{
+    public AmountNotAllowedException(String message){
+        super(message);
+    }
+}
