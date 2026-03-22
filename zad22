@@ -1,0 +1,85 @@
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+public class F1Test {
+
+    public static void main(String[] args) {
+        F1Race f1Race = new F1Race();
+        f1Race.readResults(System.in);
+        f1Race.printSorted(System.out);
+    }
+
+}
+
+class F1Race {
+    private List<Driver> drivers;
+
+    public F1Race() {
+        drivers=new ArrayList<>();
+    }
+
+    public void readResults(InputStream in) {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+        drivers=reader.lines().filter(Objects::nonNull).map(Driver::CreateDriver).collect(Collectors.toList());
+    }
+
+    public void printSorted(PrintStream out) {
+        PrintWriter writer = new PrintWriter(out);
+        drivers.stream().sorted(Comparator.comparingInt(Driver::GetBestTime)).forEach(writer::println);
+        writer.flush();
+    }
+}
+class Driver{
+    private String Name;
+    private List<String> Times;
+
+    public Driver(String name, List<String> times) {
+        Name = name;
+        Times = times;
+    }
+    private int TimestoSecods(String Time){
+        String []parts=Time.split(":");
+        int min=Integer.parseInt(parts[0]);
+        int sec=Integer.parseInt(parts[1]);
+        int milis=Integer.parseInt(parts[2]);
+        return min*60000+sec*1000+milis;
+    }
+    public int GetBestTime(){
+        return TimestoSecods(Times.get(0));
+    }
+    public void sortTimes() {
+        Times.sort(Comparator.comparingInt(this::TimestoSecods));
+    }
+    public static Driver CreateDriver(String line)
+    {
+        String[] parts=line.split("\\s+");
+        String name=parts[0];
+        List<String> times=new ArrayList<>();
+        for(int i=1;i<parts.length;i++){
+            times.add(parts[i]);
+        }
+        Driver d=new Driver(name,times);
+        d.sortTimes();
+        return d;
+    }
+
+    public String getName() {
+        return Name;
+    }
+
+    public List<String> getTimes() {
+        return Times;
+    }
+
+    @Override
+    public String toString() {
+        int i=0;
+        i++;
+        return String.format("%s. %s %s",i+1,Name,Times.get(0));
+        
+    }
+}
