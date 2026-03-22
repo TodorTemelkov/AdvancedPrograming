@@ -1,0 +1,130 @@
+import java.io.*;
+import java.sql.Time;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+public class TimesTest {
+
+    public static void main(String[] args) {
+        TimeTable timeTable = new TimeTable();
+        try {
+            timeTable.readTimes(System.in);
+        } catch (UnsupportedFormatException e) {
+            System.out.println("UnsupportedFormatException: " + e.getMessage());
+        } catch (InvalidTimeException e) {
+            System.out.println("InvalidTimeException: " + e.getMessage());
+        }
+        System.out.println("24 HOUR FORMAT");
+        timeTable.writeTimes(System.out, TimeFormat.FORMAT_24);
+        System.out.println("AM/PM FORMAT");
+        timeTable.writeTimes(System.out, TimeFormat.FORMAT_AMPM);
+    }
+
+}
+class UnsupportedFormatException extends Exception {
+    public UnsupportedFormatException(String message) { super(message); }
+}
+
+class InvalidTimeException extends Exception {
+    public InvalidTimeException(String message) { super(message); }
+}
+
+enum TimeFormat {
+    FORMAT_24, FORMAT_AMPM
+}
+
+class Times implements Comparable<Times> {
+    private int hour;
+    private int minute;
+
+    public Times(int hour, int minute) {
+        this.hour = hour;
+        this.minute = minute;
+    }
+
+    // Parse a string like "11:15" or "0.45"
+    public static Times parse(String line) throws UnsupportedFormatException, InvalidTimeException {
+        line = line.trim();
+        char separator;
+        if (line.contains(":")) separator = ':';
+        else if (line.contains(".")) separator = '.';
+        else throw new UnsupportedFormatException(line); // unsupported separator
+
+        String[] parts;
+        if (separator == ':') parts = line.split(":");
+        else parts = line.split("\\."); // dot must be escaped
+
+        if (parts.length != 2) throw new UnsupportedFormatException(line);
+
+        int h, m;
+        try {
+            h = Integer.parseInt(parts[0].trim());
+            m = Integer.parseInt(parts[1].trim());
+        } catch (NumberFormatException e) {
+            throw new UnsupportedFormatException(line);
+        }
+
+        if (h < 0 || h > 23 || m < 0 || m > 59)
+            throw new InvalidTimeException(line);
+
+        return new Times(h, m);
+    }
+
+    // Convert to AM/PM format
+    public String toAMPM() {
+        int h = hour;
+        String suffix;
+        if (h == 0) { h = 12; suffix = "AM"; }
+        else if (h < 12) suffix = "AM";
+        else if (h == 12) suffix = "PM";
+        else { h -= 12; suffix = "PM"; }
+
+        return String.format("%2d:%02d %s", h, minute, suffix);
+    }
+
+    // Convert to 24-hour format string
+    public String to24Hour() {
+        return String.format("%2d:%02d", hour, minute);
+    }
+
+    @Override
+    public int compareTo(Times o) {
+        if (this.hour != o.hour) return Integer.compare(this.hour, o.hour);
+        return Integer.compare(this.minute, o.minute);
+    }
+}
+
+class TimeTable {
+    private List<Times> times = new ArrayList<>();
+
+    public TimeTable() {}
+
+    public void readTimes(InputStream inputStream) throws UnsupportedFormatException, InvalidTimeException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        String line;
+        try {
+            while ((line = reader.readLine()) != null) {
+                String[] tokens = line.trim().split("\\s+");
+                for (String token : tokens) {
+                    Times t = Times.parse(token); // may throw exceptions
+                    times.add(t);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void writeTimes(OutputStream outputStream, TimeFormat format) {
+        PrintWriter pw = new PrintWriter(outputStream);
+        List<Times> sorted = times.stream().sorted().collect(Collectors.toList());
+        for (Times t : sorted) {
+            if (format == TimeFormat.FORMAT_24) pw.println(t.to24Hour());
+            else pw.println(t.toAMPM());
+        }
+        pw.flush();
+    }
+}
