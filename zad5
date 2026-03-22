@@ -1,0 +1,61 @@
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int n = scanner.nextInt();
+        MinMax<String> strings = new MinMax<>();
+        for (int i = 0; i < n; ++i) {
+            String s = scanner.next();
+            strings.update(s);
+        }
+        System.out.println(strings);
+
+        MinMax<Integer> ints = new MinMax<>();
+        for (int i = 0; i < n; ++i) {
+            int x = scanner.nextInt();
+            ints.update(x);
+        }
+        System.out.println(ints);
+    }
+}
+
+class MinMax<T extends Comparable<T>> {
+    private T min;
+    private T max;
+    private int counter;
+
+    public MinMax() {
+        counter = 0;
+    }
+
+    void update(T element) {
+        // first element initializes both
+        if (min == null && max == null) {
+            min = element;
+            max = element;
+            return;
+        }
+
+        if (element.compareTo(min) < 0) {
+            min = element; // new minimum
+            counter++;
+
+        } else if (element.compareTo(max) > 0) {
+            max = element; // new maximum
+            counter++;
+
+        } else if (!element.equals(min) && !element.equals(max)) {
+            // only increment when it's neither min nor max
+            counter++;
+        }
+    }
+
+    public T min() { return min; }
+    public T max() { return max; }
+
+    @Override
+    public String toString() {
+        return String.format("%s %s %d\n", min, max, counter);
+    }
+}
